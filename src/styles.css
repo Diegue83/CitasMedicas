@@ -1,1 +1,44 @@
 /* You can add global styles to this file, and also import other style files */
+/* src/styles.css - Estilos globales de CitasMed */
+
+/* Reset y base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #1e293b;
+  background: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Inputs y selects por defecto */
+input, select, textarea, button {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Remover outline por defecto, reemplazar con focus personalizado */
+*:focus { outline: none; }
+
+/* Utilidades de texto */
+.text-muted { color: #64748b; }
+.text-success { color: #15803d; }
+.text-danger { color: #dc2626; }
+.text-warning { color: #b45309; }
+
+/* Chart.js canvas */
+canvas { display: block; }
