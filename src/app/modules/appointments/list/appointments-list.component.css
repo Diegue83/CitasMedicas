@@ -1,0 +1,149 @@
+/* src/app/modules/appointments/list/appointments-list.component.css */
+
+.page { max-width: 900px; margin: 0 auto; }
+
+.page-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 1.5rem;
+}
+.page-header h1 { font-size: 1.75rem; font-weight: 700; color: #1e293b; margin: 0 0 0.25rem; }
+.subtitle { color: #64748b; margin: 0; font-size: 0.9rem; }
+
+.btn-primary {
+  background: #3b82f6; color: white;
+  padding: 0.6rem 1.25rem; border-radius: 8px;
+  text-decoration: none; font-weight: 500; font-size: 0.9rem;
+}
+.btn-primary:hover { background: #2563eb; }
+
+/* ── Filtros ── */
+.filters {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;
+}
+
+.date-filter { display: flex; align-items: center; gap: 0.5rem; }
+
+.nav-btn {
+  width: 32px; height: 32px; background: white;
+  border: 1.5px solid #e2e8f0; border-radius: 6px;
+  cursor: pointer; font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-btn:hover { background: #f8fafc; }
+
+.date-input {
+  padding: 0.5rem 0.75rem; border: 1.5px solid #e2e8f0;
+  border-radius: 8px; font-size: 0.9rem; color: #1e293b;
+}
+.date-input:focus { outline: none; border-color: #3b82f6; }
+
+.btn-hoy {
+  padding: 0.5rem 0.85rem; background: #f1f5f9;
+  border: 1.5px solid #e2e8f0; border-radius: 6px;
+  font-size: 0.85rem; cursor: pointer; color: #374151;
+}
+.btn-hoy:hover { background: #e2e8f0; }
+
+.badge-info {
+  background: #dbeafe; color: #1d4ed8;
+  padding: 0.3rem 0.75rem; border-radius: 20px;
+  font-size: 0.8rem; font-weight: 500;
+}
+
+/* ── Skeleton ── */
+.loading-list { display: flex; flex-direction: column; gap: 1rem; }
+.skeleton-card {
+  height: 100px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite; border-radius: 12px;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+.empty-state span { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
+.empty-state p { margin: 0 0 1rem; }
+
+.btn-outline {
+  display: inline-block; padding: 0.5rem 1.25rem;
+  border: 1.5px solid #3b82f6; color: #3b82f6;
+  border-radius: 8px; text-decoration: none; font-size: 0.875rem;
+}
+.btn-outline:hover { background: #3b82f6; color: white; }
+
+/* ── Cards de citas ── */
+.citas-grid { display: flex; flex-direction: column; gap: 1rem; }
+
+.cita-card {
+  background: white; border-radius: 12px;
+  border: 1px solid #f1f5f9; border-left: 4px solid #3b82f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: grid; grid-template-columns: 120px 1fr auto;
+  overflow: hidden;
+}
+
+.cita-card-time {
+  background: #eff6ff; padding: 1rem;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0.25rem;
+}
+
+.hora-grande { font-size: 1.1rem; font-weight: 700; color: #1d4ed8; }
+.duracion-badge {
+  background: #3b82f6; color: white;
+  padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.75rem;
+}
+.hora-fin { font-size: 0.75rem; color: #64748b; }
+
+.cita-card-body { padding: 1rem; }
+
+.paciente-header { display: flex; align-items: center; gap: 0.75rem; }
+
+.avatar {
+  width: 36px; height: 36px; background: #dbeafe; color: #1d4ed8;
+  border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+}
+
+.paciente-nombre { font-weight: 600; color: #1e293b; margin: 0; font-size: 0.95rem; }
+.paciente-tel    { color: #64748b; margin: 0.15rem 0 0; font-size: 0.8rem; }
+.notas           { font-size: 0.85rem; color: #64748b; margin: 0.5rem 0 0; font-style: italic; }
+
+.calendar-badge {
+  display: inline-block;
+  margin-top: 0.4rem;
+  background: #dcfce7; color: #15803d;
+  padding: 0.2rem 0.6rem; border-radius: 20px;
+  font-size: 0.75rem; font-weight: 500;
+}
+
+.cita-card-actions {
+  display: flex; flex-direction: column;
+  gap: 0.4rem; padding: 0.75rem; justify-content: center;
+}
+
+.btn-edit {
+  padding: 0.35rem 0.75rem; border: 1px solid #bfdbfe;
+  color: #2563eb; border-radius: 6px; text-decoration: none;
+  font-size: 0.8rem; white-space: nowrap;
+}
+.btn-edit:hover { background: #dbeafe; }
+
+.btn-cancel {
+  padding: 0.35rem 0.75rem; border: 1px solid #fecaca;
+  color: #dc2626; border-radius: 6px; background: none;
+  font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+}
+.btn-cancel:hover { background: #fef2f2; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  padding: 0.75rem 1.25rem; border-radius: 8px;
+  font-size: 0.9rem; font-weight: 500; z-index: 1000;
+}
+.toast-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.toast-error   { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }

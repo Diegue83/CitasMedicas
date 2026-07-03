@@ -1,0 +1,198 @@
+/* src/app/modules/dashboard/dashboard.component.css */
+
+.dashboard { max-width: 1100px; margin: 0 auto; }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.25rem;
+}
+
+.subtitle { color: #64748b; margin: 0; font-size: 0.9rem; }
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #2563eb; }
+
+/* ── Skeleton ── */
+.loading-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.skeleton {
+  height: 80px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── Stats ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f1f5f9;
+}
+
+.stat-icon { font-size: 2rem; }
+.stat-info { display: flex; flex-direction: column; }
+.stat-value { font-size: 1.75rem; font-weight: 700; color: #1e293b; line-height: 1; }
+.stat-label { font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; }
+
+/* ── Grid principal ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Cards ── */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f1f5f9;
+}
+
+.card-full { grid-column: 1 / -1; }
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.card-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.card-link { font-size: 0.8rem; color: #3b82f6; text-decoration: none; }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 2rem; color: #94a3b8; }
+.empty-state span { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+.empty-state p { margin: 0 0 1rem; font-size: 0.9rem; }
+
+.btn-outline {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border: 1.5px solid #3b82f6;
+  color: #3b82f6;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+.btn-outline:hover { background: #3b82f6; color: white; }
+
+/* ── Lista de citas ── */
+.citas-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.cita-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+}
+
+.cita-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.hora { font-weight: 700; font-size: 1rem; color: #1e293b; }
+.duracion { font-size: 0.75rem; color: #64748b; }
+
+.cita-info { flex: 1; display: flex; flex-direction: column; }
+.paciente-nombre { font-weight: 600; color: #1e293b; font-size: 0.9rem; }
+.paciente-tel { font-size: 0.8rem; color: #64748b; }
+
+.btn-cancel-sm {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-cancel-sm:hover { background: #fef2f2; }
+
+/* ── Chart ── */
+.chart-container { height: 200px; position: relative; }
+
+/* ── Pacientes frecuentes ── */
+.frecuentes-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.frecuente-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.frecuente-rank {
+  width: 24px;
+  height: 24px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.frecuente-nombre { flex: 1; font-size: 0.9rem; color: #1e293b; }
+.frecuente-count { font-size: 0.8rem; color: #64748b; }

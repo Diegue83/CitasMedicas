@@ -63,6 +63,13 @@ export const routes: Routes = [
     ]
   },
   {
+    // ← Nueva ruta del calendario mensual
+    path: 'calendario',
+    loadComponent: () =>
+      import('./modules/appointments/calendar/calendar.component').then(m => m.CalendarComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: '**',
     redirectTo: 'dashboard'
   }

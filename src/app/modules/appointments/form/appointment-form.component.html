@@ -1,0 +1,147 @@
+<!-- src/app/modules/appointments/form/appointment-form.component.html -->
+<div class="page">
+
+  <div class="page-header">
+    <a routerLink="/citas" class="back-link">← Volver a citas</a>
+    <h1>{{ isEditing() ? 'Editar cita' : 'Agendar nueva cita' }}</h1>
+  </div>
+
+  <!-- Indicador Google Calendar -->
+  <div class="calendar-status" [class.connected]="googleConnected()" [class.disconnected]="!googleConnected()">
+    @if (googleConnected()) {
+      <span>📅</span>
+      <span>Google Calendar conectado — la cita se agregará a tu calendario automáticamente.</span>
+    } @else {
+      <span>⚠️</span>
+      <span>
+        Google Calendar no conectado.
+        <a routerLink="/login" class="link">Inicia sesión con Google</a>
+        para sincronizar citas.
+      </span>
+    }
+  </div>
+
+  <div class="form-card">
+    <form #form="ngForm" (ngSubmit)="onSubmit(form)">
+
+      <!-- Búsqueda de paciente -->
+      <div class="form-group">
+        <label>Paciente *</label>
+        <div class="patient-search">
+          <input
+            type="text"
+            [(ngModel)]="busquedaPaciente"
+            (ngModelChange)="onBuscarPaciente($event)"
+            name="busqueda"
+            placeholder="Buscar paciente por nombre..."
+            autocomplete="off"
+            [disabled]="!!cita.paciente_id"
+          />
+          @if (cita.paciente_id) {
+            <div class="selected-patient">
+              <div class="avatar-sm">{{ pacienteSeleccionado()?.nombre?.charAt(0) }}</div>
+              <span>{{ pacienteSeleccionado()?.nombre }}</span>
+              <button type="button" (click)="deseleccionarPaciente()" class="clear-patient">✕</button>
+            </div>
+          }
+          @if (resultadosBusqueda().length > 0 && !cita.paciente_id) {
+            <div class="search-results">
+              @for (p of resultadosBusqueda(); track p.id) {
+                <div class="search-result-item" (click)="seleccionarPaciente(p)">
+                  <div class="avatar-sm">{{ p.nombre.charAt(0) }}</div>
+                  <div>
+                    <p class="result-nombre">{{ p.nombre }}</p>
+                    <p class="result-tel">{{ p.telefono }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+        @if (showPacienteError()) {
+          <span class="error-msg">Selecciona un paciente de la lista.</span>
+        }
+        <div class="new-patient-hint">
+          ¿Paciente nuevo? <a routerLink="/pacientes/nuevo" class="link">Registrar aquí →</a>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fecha">Fecha *</label>
+          <input
+            id="fecha" type="date"
+            [(ngModel)]="cita.fecha" name="fecha"
+            required [min]="fechaMinima"
+            #fechaCtrl="ngModel"
+            [class.input-error]="fechaCtrl.invalid && fechaCtrl.touched"
+          />
+          @if (fechaCtrl.invalid && fechaCtrl.touched) {
+            <span class="error-msg">La fecha es requerida.</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="hora">Hora de inicio *</label>
+          <select
+            id="hora"
+            [(ngModel)]="cita.hora_inicio" name="hora_inicio"
+            required #horaCtrl="ngModel"
+            [class.input-error]="horaCtrl.invalid && horaCtrl.touched"
+          >
+            <option value="">Seleccionar hora</option>
+            @for (hora of horasDisponibles; track hora.value) {
+              <option [value]="hora.value">{{ hora.label }}</option>
+            }
+          </select>
+          @if (horaCtrl.invalid && horaCtrl.touched) {
+            <span class="error-msg">Selecciona una hora.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Duración *</label>
+        <div class="duracion-btns">
+          <button type="button"
+            [class.selected]="cita.duracion === 30"
+            (click)="cita.duracion = 30" class="duracion-btn">
+            30 minutos
+          </button>
+          <button type="button"
+            [class.selected]="cita.duracion === 60"
+            (click)="cita.duracion = 60" class="duracion-btn">
+            60 minutos
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notas">Notas (opcional)</label>
+        <textarea
+          id="notas" [(ngModel)]="cita.notas"
+          name="notas" rows="3"
+          placeholder="Motivo de consulta, observaciones...">
+        </textarea>
+      </div>
+
+      @if (errorMsg()) {
+        <div class="alert alert-error">⚠️ {{ errorMsg() }}</div>
+      }
+
+      <div class="form-actions">
+        <a routerLink="/citas" class="btn-cancel">Cancelar</a>
+        <button type="submit" class="btn-submit" [disabled]="loading()">
+          @if (loading()) {
+            <span class="spinner"></span>
+            {{ googleConnected() ? 'Guardando y sincronizando...' : 'Guardando...' }}
+          } @else {
+            {{ isEditing() ? 'Guardar cambios' : 'Agendar cita' }}
+          }
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>

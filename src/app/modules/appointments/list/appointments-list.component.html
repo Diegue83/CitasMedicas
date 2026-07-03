@@ -1,0 +1,86 @@
+<!-- src/app/modules/appointments/list/appointments-list.component.html -->
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Citas</h1>
+      <p class="subtitle">Agenda y gestión de citas</p>
+    </div>
+    <a routerLink="/citas/nueva" class="btn-primary">+ Agendar cita</a>
+  </div>
+
+  <!-- Filtro de fecha -->
+  <div class="filters">
+    <div class="date-filter">
+      <button (click)="cambiarDia(-1)" class="nav-btn">‹</button>
+      <input
+        type="date"
+        [(ngModel)]="fechaSeleccionada"
+        (ngModelChange)="onFechaChange($event)"
+        class="date-input"
+      />
+      <button (click)="cambiarDia(1)" class="nav-btn">›</button>
+      <button (click)="irAHoy()" class="btn-hoy">Hoy</button>
+    </div>
+    <span class="badge-info">
+      {{ citas().length }} cita{{ citas().length !== 1 ? 's' : '' }} este día
+    </span>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-list">
+      @for (i of [1,2,3]; track i) {
+        <div class="skeleton-card"></div>
+      }
+    </div>
+  } @else if (citas().length === 0) {
+    <div class="empty-state">
+      <span>📅</span>
+      <p>No hay citas programadas para este día.</p>
+      <a routerLink="/citas/nueva" class="btn-outline">Agendar cita</a>
+    </div>
+  } @else {
+    <div class="citas-grid">
+      @for (cita of citas(); track cita.id) {
+        <div class="cita-card">
+
+          <div class="cita-card-time">
+            <span class="hora-grande">{{ formatHora(cita.hora_inicio) }}</span>
+            <span class="duracion-badge">{{ cita.duracion }} min</span>
+            <span class="hora-fin">hasta {{ horaFin(cita.hora_inicio, cita.duracion) }}</span>
+          </div>
+
+          <div class="cita-card-body">
+            <div class="paciente-header">
+              <div class="avatar">{{ cita.paciente!.nombre.charAt(0).toUpperCase() }}</div>
+              <div>
+                <p class="paciente-nombre">{{ cita.paciente!.nombre }}</p>
+                <p class="paciente-tel">📞 {{ cita.paciente!.telefono }}</p>
+              </div>
+            </div>
+            @if (cita.notas) {
+              <p class="notas">📝 {{ cita.notas }}</p>
+            }
+            @if (cita.calendar_event_id) {
+              <span class="calendar-badge">📅 En Google Calendar</span>
+            }
+          </div>
+
+          <div class="cita-card-actions">
+            <a [routerLink]="['/citas', cita.id, 'editar']" class="btn-edit">✏️ Editar</a>
+            <button (click)="cancelarCita(cita)" class="btn-cancel">🚫 Cancelar</button>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
+
+  @if (successMsg()) {
+    <div class="toast toast-success">✅ {{ successMsg() }}</div>
+  }
+  @if (errorMsg()) {
+    <div class="toast toast-error">⚠️ {{ errorMsg() }}</div>
+  }
+
+</div>

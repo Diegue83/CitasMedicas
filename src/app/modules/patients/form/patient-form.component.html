@@ -1,0 +1,88 @@
+<!-- src/app/modules/patients/form/patient-form.component.html -->
+<div class="page">
+
+  <div class="page-header">
+    <a routerLink="/pacientes" class="back-link">← Volver a pacientes</a>
+    <h1>{{ isEditing() ? 'Editar paciente' : 'Nuevo paciente' }}</h1>
+  </div>
+
+  <div class="form-card">
+    @if (loadingPage()) {
+      <div class="form-loading">Cargando...</div>
+    } @else {
+      <form #form="ngForm" (ngSubmit)="onSubmit(form)">
+
+        <div class="form-group">
+          <label for="nombre">Nombre completo *</label>
+          <input
+            id="nombre"
+            type="text"
+            [(ngModel)]="paciente.nombre"
+            name="nombre"
+            required
+            minlength="2"
+            placeholder="Ej: María García López"
+            #nombreCtrl="ngModel"
+            [class.input-error]="nombreCtrl.invalid && nombreCtrl.touched"
+          />
+          @if (nombreCtrl.invalid && nombreCtrl.touched) {
+            <span class="error-msg">El nombre es requerido (mínimo 2 caracteres).</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="telefono">Teléfono *</label>
+          <input
+            id="telefono"
+            type="tel"
+            [(ngModel)]="paciente.telefono"
+            name="telefono"
+            required
+            minlength="10"
+            pattern="[0-9]{10,15}"
+            placeholder="Ej: 4611234567"
+            #telCtrl="ngModel"
+            [class.input-error]="telCtrl.invalid && telCtrl.touched"
+          />
+          @if (telCtrl.invalid && telCtrl.touched) {
+            <span class="error-msg">El teléfono debe tener al menos 10 dígitos.</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="correo">Correo electrónico (opcional)</label>
+          <input
+            id="correo"
+            type="email"
+            [(ngModel)]="paciente.correo"
+            name="correo"
+            placeholder="correo@ejemplo.com"
+            #correoCtrl="ngModel"
+            [class.input-error]="correoCtrl.invalid && correoCtrl.touched"
+          />
+          @if (correoCtrl.invalid && correoCtrl.touched) {
+            <span class="error-msg">Ingresa un correo válido.</span>
+          }
+        </div>
+
+        @if (errorMsg()) {
+          <div class="alert alert-error">⚠️ {{ errorMsg() }}</div>
+        }
+
+        <div class="form-actions">
+          <a routerLink="/pacientes" class="btn-cancel">Cancelar</a>
+          <button type="submit" class="btn-submit"
+            [disabled]="loading() || form.invalid">
+            @if (loading()) {
+              <span class="spinner"></span> Guardando...
+            } @else {
+              {{ isEditing() ? 'Guardar cambios' : 'Registrar paciente' }}
+            }
+          </button>
+        </div>
+
+      </form>
+    }
+  </div>
+
+</div>

@@ -1,0 +1,92 @@
+<!-- src/app/modules/patients/list/patients-list.component.html -->
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Pacientes</h1>
+      <p class="subtitle">{{ pacientes().length }} pacientes registrados</p>
+    </div>
+    <a routerLink="/pacientes/nuevo" class="btn-primary">+ Nuevo paciente</a>
+  </div>
+
+  <!-- Búsqueda -->
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input
+      type="text"
+      [(ngModel)]="searchQuery"
+      (ngModelChange)="onSearch($event)"
+      placeholder="Buscar por nombre o teléfono..."
+      class="search-input"
+    />
+    @if (searchQuery) {
+      <button (click)="clearSearch()" class="clear-btn">✕</button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-list">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="skeleton-row"></div>
+      }
+    </div>
+  } @else if (pacientesFiltrados().length === 0) {
+    <div class="empty-state">
+      <span>👤</span>
+      @if (searchQuery) {
+        <p>No se encontraron pacientes con "{{ searchQuery }}".</p>
+        <button (click)="clearSearch()" class="btn-outline">Limpiar búsqueda</button>
+      } @else {
+        <p>Aún no tienes pacientes registrados.</p>
+        <a routerLink="/pacientes/nuevo" class="btn-outline">Registrar primer paciente</a>
+      }
+    </div>
+  } @else {
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Teléfono</th>
+            <th>Correo</th>
+            <th>Fecha registro</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of pacientesFiltrados(); track p.id) {
+            <tr>
+              <td>
+                <div class="patient-name">
+                  <div class="avatar">{{ p.nombre.charAt(0).toUpperCase() }}</div>
+                  {{ p.nombre }}
+                </div>
+              </td>
+              <td>{{ p.telefono }}</td>
+              <td>{{ p.correo || '—' }}</td>
+              <td>{{ p.created_at | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <div class="action-btns">
+                  <a [routerLink]="['/pacientes', p.id, 'editar']" class="btn-edit">
+                    ✏️ Editar
+                  </a>
+                  <button (click)="deletePaciente(p)" class="btn-delete">
+                    🗑️ Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (successMsg()) {
+    <div class="toast toast-success">✅ {{ successMsg() }}</div>
+  }
+  @if (errorMsg()) {
+    <div class="toast toast-error">⚠️ {{ errorMsg() }}</div>
+  }
+
+</div>
