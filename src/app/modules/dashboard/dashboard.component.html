@@ -1,0 +1,123 @@
+<!-- src/app/modules/dashboard/dashboard.component.html -->
+<div class="dashboard">
+
+  <div class="page-header">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="subtitle">{{ hoyFormateado }}</p>
+    </div>
+    <a routerLink="/citas/nueva" class="btn-primary">+ Nueva cita</a>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-grid">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="stat-card skeleton"></div>
+      }
+    </div>
+  } @else {
+
+    <!-- Tarjetas de estadísticas -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-icon">📅</span>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats().totalCitasHoy }}</span>
+          <span class="stat-label">Citas hoy</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">📆</span>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats().totalCitasSemana }}</span>
+          <span class="stat-label">Esta semana</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">🗓️</span>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats().totalCitasMes }}</span>
+          <span class="stat-label">Este mes</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">👥</span>
+        <div class="stat-info">
+          <span class="stat-value">{{ totalPacientes() }}</span>
+          <span class="stat-label">Pacientes registrados</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+
+      <!-- Agenda de hoy -->
+      <div class="card card-full">
+        <div class="card-header">
+          <h2>Agenda de hoy</h2>
+          <a routerLink="/citas" class="card-link">Ver todas →</a>
+        </div>
+        @if (citasHoy().length === 0) {
+          <div class="empty-state">
+            <span>🗓️</span>
+            <p>No hay citas programadas para hoy.</p>
+            <a routerLink="/citas/nueva" class="btn-outline">Agendar cita</a>
+          </div>
+        } @else {
+          <div class="citas-list">
+            @for (cita of citasHoy(); track cita.id) {
+              <div class="cita-item">
+                <div class="cita-time">
+                  <span class="hora">{{ formatHora(cita.hora_inicio) }}</span>
+                  <span class="duracion">{{ cita.duracion }} min</span>
+                </div>
+                <div class="cita-info">
+                  <span class="paciente-nombre">{{ cita.paciente!.nombre }}</span>
+                  <span class="paciente-tel">📞 {{ cita.paciente!.telefono }}</span>
+                </div>
+                <button class="btn-cancel-sm" (click)="cancelarCita(cita.id!)">
+                  Cancelar
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Gráfico semanal -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Citas por día (semana actual)</h2>
+        </div>
+        <div class="chart-container">
+          <canvas #weekChart></canvas>
+        </div>
+      </div>
+
+      <!-- Pacientes frecuentes -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Pacientes frecuentes (este mes)</h2>
+        </div>
+        @if (stats().pacientesFrecuentes.length === 0) {
+          <div class="empty-state">
+            <span>👤</span>
+            <p>Sin datos suficientes este mes.</p>
+          </div>
+        } @else {
+          <div class="frecuentes-list">
+            @for (p of stats().pacientesFrecuentes; track p.nombre; let i = $index) {
+              <div class="frecuente-item">
+                <div class="frecuente-rank">{{ i + 1 }}</div>
+                <span class="frecuente-nombre">{{ p.nombre }}</span>
+                <span class="frecuente-count">{{ p.total }} cita{{ p.total !== 1 ? 's' : '' }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+    </div>
+  }
+
+</div>

@@ -1,0 +1,165 @@
+<!-- src/app/modules/appointments/calendar/calendar.component.html -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1>Calendario</h1>
+      <p class="subtitle">Vista mensual de citas</p>
+    </div>
+    <div class="header-actions">
+      @if (!googleConnected()) {
+        <div class="google-warning">
+          ⚠️ Inicia sesión con Google para ver eventos en Calendar
+        </div>
+      }
+      <a routerLink="/citas/nueva" class="btn-primary">+ Agendar cita</a>
+    </div>
+  </div>
+
+  <!-- Navegación de mes -->
+  <div class="calendar-nav">
+    <button (click)="prevMonth()" class="nav-btn" [disabled]="loading()">‹</button>
+    <h2 class="mes-label">{{ mesAnioLabel }}</h2>
+    <button (click)="nextMonth()" class="nav-btn" [disabled]="loading()">›</button>
+    <button (click)="irAHoy()" class="btn-hoy">Hoy</button>
+
+    <!-- Leyenda de estados -->
+    <div class="leyenda">
+      <span class="leyenda-item"><span class="dot dot-programada"></span> Programada</span>
+      <span class="leyenda-item"><span class="dot dot-confirmada"></span> Confirmada</span>
+    </div>
+  </div>
+
+  <!-- Grid del calendario -->
+  <div class="calendar-wrapper">
+
+    <!-- Cabecera días de la semana -->
+    <div class="calendar-grid">
+      @for (dia of DIAS; track dia) {
+        <div class="day-header">{{ dia }}</div>
+      }
+
+      @if (loading()) {
+        @for (i of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]; track i) {
+          <div class="day-cell skeleton"></div>
+        }
+      } @else {
+        @for (day of calendarDays(); track day.dateStr) {
+          <div
+            class="day-cell"
+            [class.other-month]="!day.isCurrentMonth"
+            [class.today]="day.isToday"
+            [class.selected]="selectedDay()?.dateStr === day.dateStr"
+            [class.has-citas]="day.citas.length > 0"
+            (click)="selectDay(day)"
+          >
+            <span class="day-number">{{ day.date.getDate() }}</span>
+
+            <!-- Puntos de citas (máximo 3 visibles) -->
+            @if (day.citas.length > 0) {
+              <div class="citas-dots">
+                @for (cita of day.citas.slice(0, 3); track cita.id) {
+                  <span class="dot"
+                    [class.dot-programada]="cita.estado === 'programada'"
+                    [class.dot-confirmada]="cita.estado === 'confirmada'">
+                  </span>
+                }
+                @if (day.citas.length > 3) {
+                  <span class="more-count">+{{ day.citas.length - 3 }}</span>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+  </div>
+
+  <!-- Panel lateral: detalle del día seleccionado -->
+  @if (selectedDay()) {
+    <div class="day-detail">
+
+      <div class="detail-header">
+        <h3>
+          {{ selectedDay()!.date.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long'}) }}
+        </h3>
+        <a [routerLink]="['/citas/nueva']" [queryParams]="{fecha: selectedDay()!.dateStr}"
+           class="btn-add-cita">+ Cita</a>
+      </div>
+
+      @if (selectedDay()!.citas.length === 0) {
+        <div class="detail-empty">
+          <span>📅</span>
+          <p>Sin citas este día</p>
+        </div>
+      } @else {
+        <div class="detail-citas">
+          @for (cita of selectedDay()!.citas; track cita.id) {
+            <div class="detail-cita" [class.cita-confirmada]="cita.estado === 'confirmada'">
+
+              <!-- Hora e info -->
+              <div class="detail-cita-info">
+                <div class="detail-hora">{{ formatHora(cita.hora_inicio) }}</div>
+                <div class="detail-paciente">
+                  <div class="avatar">{{ cita.paciente.nombre.charAt(0).toUpperCase() }}</div>
+                  <div>
+                    <p class="nombre">{{ cita.paciente.nombre }}</p>
+                    <p class="tel">📞 {{ cita.paciente.telefono }}</p>
+                  </div>
+                </div>
+                <div class="detail-meta">
+                  <span class="duracion">{{ cita.duracion }} min</span>
+                  <span class="badge" [ngClass]="estadoBadge(cita.estado!)">
+                    {{ cita.estado }}
+                  </span>
+                  @if (cita.calendar_event_id) {
+                    <span class="badge-calendar">📅 Calendar</span>
+                  }
+                </div>
+                @if (cita.notas) {
+                  <p class="notas">📝 {{ cita.notas }}</p>
+                }
+              </div>
+
+              <!-- Acciones -->
+              <div class="detail-cita-actions">
+                @if (cita.estado === 'programada') {
+                  <button
+                    class="btn-confirmar"
+                    [disabled]="loadingConfirmar() === cita.id"
+                    (click)="confirmarCita(cita, $event)">
+                    @if (loadingConfirmar() === cita.id) {
+                      <span class="spinner"></span>
+                    } @else {
+                      ✅
+                    }
+                    Confirmar
+                  </button>
+                }
+                <button
+                  class="btn-cancelar"
+                  [disabled]="loadingConfirmar() === cita.id"
+                  (click)="cancelarCita(cita, $event)">
+                  🚫 Cancelar
+                </button>
+              </div>
+
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- Toasts -->
+  @if (successMsg()) {
+    <div class="toast toast-success">{{ successMsg() }}</div>
+  }
+  @if (errorMsg()) {
+    <div class="toast toast-error">⚠️ {{ errorMsg() }}</div>
+  }
+
+</div>
