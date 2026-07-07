@@ -1,220 +1,169 @@
 // src/app/core/services/google-calendar.service.ts
 import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import {
-  GoogleCalendarEvent,
-  GoogleCalendarEventResponse,
-  Cita,
-  Paciente
-} from '../models';
-
-/**
- * Servicio para integrar Google Calendar API v3.
- *
- * Cómo funciona la autenticación:
- * Cuando el doctor inicia sesión con Google vía Supabase OAuth,
- * Supabase almacena el `provider_token` (access token de Google)
- * en la sesión activa. Este token es el que usamos para llamar
- * directamente a la API REST de Google Calendar sin necesidad
- * de ninguna biblioteca adicional.
- *
- * Limitación importante:
- * El `provider_token` expira en ~1 hora. Para sesiones largas,
- * Supabase renueva el token de Supabase automáticamente, pero
- * el provider_token de Google no se renueva igual. Si el doctor
- * usa la app por más de 1 hora sin recargar, puede necesitar
- * volver a iniciar sesión con Google para que Calendar funcione.
- * Esto es una limitación del OAuth de Google con Supabase.
- */
+import { GoogleCalendarEvent, GoogleCalendarEventResponse, Cita, Paciente } from '../models';
 
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
-const CALENDAR_ID  = 'primary'; // El calendario principal del doctor
+const CALENDAR_ID  = 'primary';
+
+export interface GoogleStatus {
+  conectado: boolean;
+  motivo?: string;  // Por qué no está conectado
+}
 
 @Injectable({ providedIn: 'root' })
 export class GoogleCalendarService {
 
   constructor(private supabase: SupabaseService) {}
 
-  // ─── Token ──────────────────────────────────────────────────
+  // ─── Diagnóstico detallado ───────────────────────────────────
 
   /**
-   * Obtiene el access token de Google desde la sesión de Supabase.
-   * Solo existe si el doctor inició sesión con el botón de Google.
-   * Si inició sesión con email/password, este token es null.
+   * Devuelve el estado detallado de la conexión con Google.
+   * Úsalo para mostrar mensajes claros al doctor.
    */
-  private async getGoogleToken(): Promise<string | null> {
+  async getStatus(): Promise<GoogleStatus> {
     const { data } = await this.supabase.client.auth.getSession();
-    const token = data?.session?.provider_token ?? null;
-    return token;
+    const session  = data?.session;
+
+    if (!session) {
+      return { conectado: false, motivo: 'No hay sesión activa.' };
+    }
+
+    const provider = session.user?.app_metadata?.provider;
+    if (provider !== 'google') {
+      return {
+        conectado: false,
+        motivo: 'Iniciaste sesión con correo y contraseña. Para sincronizar con Google Calendar debes iniciar sesión con el botón de Google.'
+      };
+    }
+
+    const token = session.provider_token;
+    if (!token) {
+      return {
+        conectado: false,
+        motivo: 'El token de Google expiró. Por favor cierra sesión y vuelve a entrar con Google.'
+      };
+    }
+
+    // Verificar que el token funcione realmente
+    try {
+      const res = await fetch(`${CALENDAR_API}/calendars/${CALENDAR_ID}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        return {
+          conectado: false,
+          motivo: res.status === 401
+            ? 'El token de Google expiró. Cierra sesión y vuelve a entrar con Google.'
+            : `Error al conectar con Google Calendar (${res.status}).`
+        };
+      }
+    } catch {
+      return { conectado: false, motivo: 'No se pudo conectar con Google Calendar. Verifica tu conexión.' };
+    }
+
+    return { conectado: true };
   }
 
-  /**
-   * Verifica si el doctor tiene un token de Google disponible.
-   * Usar esto antes de mostrar funcionalidades de Calendar en la UI.
-   */
   async isGoogleConnected(): Promise<boolean> {
-    const token = await this.getGoogleToken();
-    return token !== null;
+    const status = await this.getStatus();
+    return status.conectado;
   }
 
-  // ─── Operaciones CRUD en Calendar ───────────────────────────
+  private async getToken(): Promise<string | null> {
+    const { data } = await this.supabase.client.auth.getSession();
+    return data?.session?.provider_token ?? null;
+  }
 
-  /**
-   * Crea un evento en Google Calendar para una cita médica.
-   * Retorna el ID del evento creado, o null si falla.
-   */
+  // ─── Crear evento ────────────────────────────────────────────
+
   async crearEvento(
     cita: Omit<Cita, 'id' | 'doctor_id' | 'created_at' | 'estado'>,
     paciente: Paciente
-  ): Promise<string | null> {
-    const token = await this.getGoogleToken();
-    if (!token) {
-      console.warn('[GoogleCalendar] Sin token de Google. El doctor inició sesión con email/password.');
-      return null;
+  ): Promise<{ eventId: string | null; error: string | null }> {
+    const status = await this.getStatus();
+    if (!status.conectado) {
+      return { eventId: null, error: status.motivo! };
     }
 
+    const token = await this.getToken();
+    if (!token) return { eventId: null, error: 'Sin token de Google.' };
+
     try {
-      const evento = this.buildCalendarEvent(cita, paciente);
+      const evento   = this.buildCalendarEvent(cita, paciente);
       const response = await fetch(
         `${CALENDAR_API}/calendars/${CALENDAR_ID}/events`,
         {
-          method: 'POST',
+          method:  'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type':  'application/json'
           },
           body: JSON.stringify(evento)
         }
       );
 
       if (!response.ok) {
-        const errorBody = await response.json();
-        console.error('[GoogleCalendar] Error al crear evento:', errorBody);
-        // No lanzamos error para no bloquear el guardado de la cita
-        return null;
+        const err = await response.json();
+        console.error('[GoogleCalendar] Error crear evento:', err);
+        return { eventId: null, error: `Error Google Calendar: ${err?.error?.message ?? response.status}` };
       }
 
       const data: GoogleCalendarEventResponse = await response.json();
-      console.log('[GoogleCalendar] Evento creado:', data.htmlLink);
-      return data.id;
+      console.log('[GoogleCalendar] ✅ Evento creado:', data.htmlLink);
+      return { eventId: data.id, error: null };
 
-    } catch (err) {
-      console.error('[GoogleCalendar] Error de red al crear evento:', err);
-      return null;
+    } catch (err: any) {
+      return { eventId: null, error: `Error de red: ${err.message}` };
     }
   }
 
-  /**
-   * Elimina un evento de Google Calendar cuando se cancela una cita.
-   * Si el evento no existe o ya fue eliminado, lo ignora silenciosamente.
-   */
+  // ─── Eliminar evento ─────────────────────────────────────────
+
   async eliminarEvento(calendarEventId: string): Promise<void> {
-    const token = await this.getGoogleToken();
-    if (!token) {
-      console.warn('[GoogleCalendar] Sin token de Google para eliminar evento.');
-      return;
-    }
+    const token = await this.getToken();
+    if (!token) return;
 
     try {
-      const response = await fetch(
+      await fetch(
         `${CALENDAR_API}/calendars/${CALENDAR_ID}/events/${calendarEventId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
+        { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }
       );
-
-      // 204 = eliminado, 404 = ya no existía. Ambos son aceptables.
-      if (!response.ok && response.status !== 404) {
-        const errorBody = await response.text();
-        console.error('[GoogleCalendar] Error al eliminar evento:', errorBody);
-      } else {
-        console.log('[GoogleCalendar] Evento eliminado:', calendarEventId);
-      }
     } catch (err) {
-      console.error('[GoogleCalendar] Error de red al eliminar evento:', err);
-    }
-  }
-
-  /**
-   * Actualiza un evento existente en Google Calendar.
-   * Útil si en el futuro se permite editar fecha/hora de una cita.
-   */
-  async actualizarEvento(
-    calendarEventId: string,
-    cita: Partial<Cita>,
-    paciente: Paciente
-  ): Promise<boolean> {
-    const token = await this.getGoogleToken();
-    if (!token) return false;
-
-    try {
-      const evento = this.buildCalendarEvent(cita as any, paciente);
-      const response = await fetch(
-        `${CALENDAR_API}/calendars/${CALENDAR_ID}/events/${calendarEventId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(evento)
-        }
-      );
-
-      if (!response.ok) {
-        console.error('[GoogleCalendar] Error al actualizar evento:', await response.json());
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      console.error('[GoogleCalendar] Error de red al actualizar evento:', err);
-      return false;
+      console.warn('[GoogleCalendar] No se pudo eliminar evento:', err);
     }
   }
 
   // ─── Builder ─────────────────────────────────────────────────
 
-  /**
-   * Construye el objeto de evento para la API de Google Calendar.
-   * Usa la zona horaria local del navegador para que la hora
-   * aparezca correcta en el calendario del doctor.
-   */
   private buildCalendarEvent(
     cita: Omit<Cita, 'id' | 'doctor_id' | 'created_at' | 'estado'>,
     paciente: Paciente
   ): GoogleCalendarEvent {
-    // Zona horaria local del navegador (ej: 'America/Mexico_City')
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    // Construir DateTime de inicio: 'YYYY-MM-DDTHH:MM:00'
     const startDateTime = `${cita.fecha}T${cita.hora_inicio}:00`;
+    const [h, m]        = cita.hora_inicio.split(':').map(Number);
+    const totalMin      = h * 60 + m + cita.duracion;
+    const endH          = Math.floor(totalMin / 60).toString().padStart(2, '0');
+    const endM          = (totalMin % 60).toString().padStart(2, '0');
+    const endDateTime   = `${cita.fecha}T${endH}:${endM}:00`;
 
-    // Calcular hora de fin sumando la duración en minutos
-    const [h, m] = cita.hora_inicio.split(':').map(Number);
-    const totalMin = h * 60 + m + cita.duracion;
-    const endH = Math.floor(totalMin / 60).toString().padStart(2, '0');
-    const endM = (totalMin % 60).toString().padStart(2, '0');
-    const endDateTime = `${cita.fecha}T${endH}:${endM}:00`;
-
-    // Descripción del evento
     const descripcion = [
-      `📋 Cita médica`,
+      '📋 Cita médica confirmada',
       `👤 Paciente: ${paciente.nombre}`,
       `📞 Teléfono: ${paciente.telefono}`,
       paciente.correo ? `✉️ Correo: ${paciente.correo}` : '',
-      cita.notas ? `📝 Notas: ${cita.notas}` : ''
+      cita.notas      ? `📝 Notas: ${cita.notas}`       : ''
     ].filter(Boolean).join('\n');
 
     return {
-      summary: `🏥 Cita — ${paciente.nombre}`,
+      summary:     `🏥 Cita — ${paciente.nombre}`,
       description: descripcion,
-      start: { dateTime: startDateTime, timeZone },
-      end:   { dateTime: endDateTime,   timeZone },
-      colorId: '11'  // Tomate (rojo), color estándar para citas médicas en Google Calendar
+      start:       { dateTime: startDateTime, timeZone },
+      end:         { dateTime: endDateTime,   timeZone },
+      colorId:     '11'
     };
   }
 }

@@ -14,21 +14,31 @@ import { CitasService } from './core/services/citas.service';
 })
 export class AppComponent implements OnInit {
   sidebarCollapsed = false;
-  citasPendientes  = signal(0);  // Badge de citas sin confirmar
-  userEmail        = computed(() => this.auth.currentUser()?.email ?? '');
+  citasPendientes  = signal(0);
+
+  // Datos del doctor actual desde el perfil
+  doctorNombre  = computed(() => this.auth.currentDoctor()?.nombre ?? '');
+  doctorFoto    = computed(() => this.auth.currentDoctor()?.foto_url ?? null);
+  doctorInicial = computed(() => this.auth.currentDoctor()?.nombre?.charAt(0).toUpperCase() ?? '?');
+  isAdmin       = computed(() => this.auth.isAdmin());
+
+  rolLabel = computed(() => {
+    const rol = this.auth.currentDoctor()?.rol;
+    return rol === 'admin' ? '⭐ Administrador' : '🩺 Doctor';
+  });
 
   constructor(
-    private auth: AuthService,
+    public auth: AuthService,
     private citasService: CitasService,
     private router: Router
   ) {}
 
   async ngOnInit() {
-    // Cargar badge de pendientes cuando el usuario esté autenticado
-    this.auth.currentUser();  // trigger signal
     if (this.auth.isAuthenticated()) {
       await this.loadPendientes();
     }
+    // Recargar pendientes cuando el usuario se autentica
+    this.auth.currentUser();
   }
 
   async loadPendientes() {
@@ -44,7 +54,5 @@ export class AppComponent implements OnInit {
     return this.router.url === '/login' || !this.auth.isAuthenticated();
   }
 
-  logout() {
-    this.auth.logout();
-  }
+  logout() { this.auth.logout(); }
 }
