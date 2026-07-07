@@ -1,0 +1,68 @@
+<!-- src/app/modules/doctors/list/doctors-list.component.html -->
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Doctores</h1>
+      <p class="subtitle">{{ doctores().length }} doctores registrados</p>
+    </div>
+    <a routerLink="/doctores/nuevo" class="btn-primary">+ Nuevo doctor</a>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-grid">
+      @for (i of [1,2,3]; track i) { <div class="skeleton-card"></div> }
+    </div>
+  } @else if (doctores().length === 0) {
+    <div class="empty-state">
+      <span>👨‍⚕️</span>
+      <p>No hay doctores registrados.</p>
+      <a routerLink="/doctores/nuevo" class="btn-outline">Registrar primer doctor</a>
+    </div>
+  } @else {
+    <div class="doctors-grid">
+      @for (d of doctores(); track d.id) {
+        <div class="doctor-card" [class.inactivo]="!d.activo">
+
+          <div class="doctor-avatar">
+            @if (d.foto_url) {
+              <img [src]="d.foto_url" [alt]="d.nombre" />
+            } @else {
+              <span class="avatar-initials">{{ d.nombre.charAt(0).toUpperCase() }}</span>
+            }
+          </div>
+
+          <div class="doctor-info">
+            <div class="doctor-header">
+              <h3>{{ d.nombre }}</h3>
+              <span class="rol-badge" [class.rol-admin]="d.rol === 'admin'">
+                {{ rolLabel(d.rol) }}
+              </span>
+            </div>
+            <p class="especialidad">🩺 {{ d.especialidad }}</p>
+            <p class="correo">✉️ {{ d.correo }}</p>
+            @if (d.telefono) {
+              <p class="telefono">📞 {{ d.telefono }}</p>
+            }
+            @if (!d.activo) {
+              <span class="inactivo-badge">⚠️ Inactivo</span>
+            }
+          </div>
+
+          <div class="doctor-actions">
+            <a [routerLink]="['/doctores', d.id, 'editar']" class="btn-edit">✏️ Editar</a>
+            <button (click)="toggleActivo(d)" class="btn-toggle"
+              [class.btn-activate]="!d.activo">
+              {{ d.activo ? '🔒 Desactivar' : '✅ Activar' }}
+            </button>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
+
+  @if (successMsg()) { <div class="toast toast-success">✅ {{ successMsg() }}</div> }
+  @if (errorMsg())   { <div class="toast toast-error">⚠️ {{ errorMsg() }}</div> }
+
+</div>

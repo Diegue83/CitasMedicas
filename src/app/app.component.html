@@ -4,20 +4,36 @@
 } @else {
   <div class="app-shell">
 
-    <!-- Sidebar -->
     <aside class="sidebar" [class.collapsed]="sidebarCollapsed">
 
       <div class="sidebar-header">
         <div class="brand">
           <span class="brand-icon">🏥</span>
-          @if (!sidebarCollapsed) {
-            <span class="brand-name">CitasMed</span>
-          }
+          @if (!sidebarCollapsed) { <span class="brand-name">CitasMed</span> }
         </div>
         <button class="collapse-btn" (click)="sidebarCollapsed = !sidebarCollapsed">
           {{ sidebarCollapsed ? '›' : '‹' }}
         </button>
       </div>
+
+      <!-- Avatar clickeable al perfil -->
+      <a routerLink="/perfil" class="doctor-profile"
+         [class.collapsed]="sidebarCollapsed" title="Mi perfil">
+        <div class="profile-avatar">
+          @if (doctorFoto()) {
+            <img [src]="doctorFoto()!" alt="foto" />
+          } @else {
+            <span>{{ doctorInicial() }}</span>
+          }
+        </div>
+        @if (!sidebarCollapsed) {
+          <div class="profile-info">
+            <p class="profile-nombre">{{ doctorNombre() }}</p>
+            <p class="profile-rol">{{ rolLabel() }}</p>
+          </div>
+          <span class="profile-arrow">›</span>
+        }
+      </a>
 
       <nav class="sidebar-nav">
 
@@ -35,10 +51,8 @@
             @if (citasPendientes() > 0) {
               <span class="badge-pending">{{ citasPendientes() }}</span>
             }
-          } @else {
-            @if (citasPendientes() > 0) {
-              <span class="badge-pending-dot"></span>
-            }
+          } @else if (citasPendientes() > 0) {
+            <span class="badge-pending-dot"></span>
           }
         </a>
 
@@ -54,23 +68,42 @@
           @if (!sidebarCollapsed) { <span>Pacientes</span> }
         </a>
 
+        <!-- Sección exclusiva admin -->
+        @if (isAdmin()) {
+          <div class="nav-separator"></div>
+          @if (!sidebarCollapsed) {
+            <span class="nav-section-label">Administración</span>
+          }
+
+          <a routerLink="/admin" routerLinkActive="active"
+             class="nav-item nav-item-admin" title="Panel Admin">
+            <span class="nav-icon">🏛️</span>
+            @if (!sidebarCollapsed) { <span>Panel Global</span> }
+          </a>
+
+          <a routerLink="/doctores" routerLinkActive="active"
+             class="nav-item nav-item-admin" title="Doctores">
+            <span class="nav-icon">👨‍⚕️</span>
+            @if (!sidebarCollapsed) { <span>Doctores</span> }
+          </a>
+        }
+
       </nav>
 
       <div class="sidebar-footer">
-        @if (!sidebarCollapsed) {
-          <div class="user-info">
-            <span class="user-email">{{ userEmail() }}</span>
-          </div>
-        }
+        <a routerLink="/perfil" routerLinkActive="active"
+           class="nav-item nav-perfil" title="Mi perfil">
+          <span class="nav-icon">⚙️</span>
+          @if (!sidebarCollapsed) { <span>Mi perfil</span> }
+        </a>
         <button class="logout-btn" (click)="logout()" title="Cerrar sesión">
           <span>🚪</span>
-          @if (!sidebarCollapsed) { <span>Salir</span> }
+          @if (!sidebarCollapsed) { <span>Cerrar sesión</span> }
         </button>
       </div>
 
     </aside>
 
-    <!-- Contenido principal -->
     <main class="main-content">
       <router-outlet />
     </main>

@@ -7,14 +7,28 @@
       <h1>Calendario</h1>
       <p class="subtitle">Vista mensual de citas</p>
     </div>
-    <div class="header-actions">
-      @if (!googleConnected()) {
-        <div class="google-warning">
-          ⚠️ Inicia sesión con Google para ver eventos en Calendar
+    <a routerLink="/citas/nueva" class="btn-primary">+ Agendar cita</a>
+  </div>
+
+  <!-- Banner de estado Google Calendar -->
+  <div class="google-banner"
+    [class.banner-ok]="googleStatus().conectado"
+    [class.banner-warn]="!googleStatus().conectado">
+    @if (googleStatus().conectado) {
+      <span>📅</span>
+      <span>Google Calendar conectado — las citas confirmadas aparecerán automáticamente en tu calendario.</span>
+    } @else {
+      <div class="banner-warn-content">
+        <span>⚠️</span>
+        <div>
+          <strong>Google Calendar no conectado</strong>
+          <p>{{ googleStatus().motivo }}</p>
+          @if (googleStatus().motivo?.includes('botón de Google') || googleStatus().motivo?.includes('expiró')) {
+            <a routerLink="/login" class="banner-link">Volver a iniciar sesión con Google →</a>
+          }
         </div>
-      }
-      <a routerLink="/citas/nueva" class="btn-primary">+ Agendar cita</a>
-    </div>
+      </div>
+    }
   </div>
 
   <!-- Navegación de mes -->
@@ -24,7 +38,6 @@
     <button (click)="nextMonth()" class="nav-btn" [disabled]="loading()">›</button>
     <button (click)="irAHoy()" class="btn-hoy">Hoy</button>
 
-    <!-- Leyenda de estados -->
     <div class="leyenda">
       <span class="leyenda-item"><span class="dot dot-programada"></span> Programada</span>
       <span class="leyenda-item"><span class="dot dot-confirmada"></span> Confirmada</span>
@@ -33,8 +46,6 @@
 
   <!-- Grid del calendario -->
   <div class="calendar-wrapper">
-
-    <!-- Cabecera días de la semana -->
     <div class="calendar-grid">
       @for (dia of DIAS; track dia) {
         <div class="day-header">{{ dia }}</div>
@@ -46,20 +57,15 @@
         }
       } @else {
         @for (day of calendarDays(); track day.dateStr) {
-          <div
-            class="day-cell"
+          <div class="day-cell"
             [class.other-month]="!day.isCurrentMonth"
             [class.today]="day.isToday"
             [class.selected]="selectedDay()?.dateStr === day.dateStr"
-            [class.has-citas]="day.citas.length > 0"
-            (click)="selectDay(day)"
-          >
+            (click)="selectDay(day)">
             <span class="day-number">{{ day.date.getDate() }}</span>
-
-            <!-- Puntos de citas (máximo 3 visibles) -->
             @if (day.citas.length > 0) {
               <div class="citas-dots">
-                @for (cita of day.citas.slice(0, 3); track cita.id) {
+                @for (cita of day.citas.slice(0,3); track cita.id) {
                   <span class="dot"
                     [class.dot-programada]="cita.estado === 'programada'"
                     [class.dot-confirmada]="cita.estado === 'confirmada'">
@@ -74,17 +80,13 @@
         }
       }
     </div>
-
   </div>
 
-  <!-- Panel lateral: detalle del día seleccionado -->
+  <!-- Panel del día seleccionado -->
   @if (selectedDay()) {
     <div class="day-detail">
-
       <div class="detail-header">
-        <h3>
-          {{ selectedDay()!.date.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long'}) }}
-        </h3>
+        <h3>{{ selectedDay()!.date.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long'}) }}</h3>
         <a [routerLink]="['/citas/nueva']" [queryParams]="{fecha: selectedDay()!.dateStr}"
            class="btn-add-cita">+ Cita</a>
       </div>
@@ -99,7 +101,6 @@
           @for (cita of selectedDay()!.citas; track cita.id) {
             <div class="detail-cita" [class.cita-confirmada]="cita.estado === 'confirmada'">
 
-              <!-- Hora e info -->
               <div class="detail-cita-info">
                 <div class="detail-hora">{{ formatHora(cita.hora_inicio) }}</div>
                 <div class="detail-paciente">
@@ -111,11 +112,12 @@
                 </div>
                 <div class="detail-meta">
                   <span class="duracion">{{ cita.duracion }} min</span>
-                  <span class="badge" [ngClass]="estadoBadge(cita.estado!)">
-                    {{ cita.estado }}
-                  </span>
+                  <span class="badge" [ngClass]="estadoBadge(cita.estado!)">{{ cita.estado }}</span>
                   @if (cita.calendar_event_id) {
-                    <span class="badge-calendar">📅 Calendar</span>
+                    <span class="badge-cal">📅 En Calendar</span>
+                  }
+                  @if (cita.paciente.correo) {
+                    <span class="badge-email">✉️</span>
                   }
                 </div>
                 @if (cita.notas) {
@@ -123,23 +125,19 @@
                 }
               </div>
 
-              <!-- Acciones -->
               <div class="detail-cita-actions">
                 @if (cita.estado === 'programada') {
-                  <button
-                    class="btn-confirmar"
+                  <button class="btn-confirmar"
                     [disabled]="loadingConfirmar() === cita.id"
                     (click)="confirmarCita(cita, $event)">
                     @if (loadingConfirmar() === cita.id) {
-                      <span class="spinner"></span>
+                      <span class="spinner"></span> Confirmando...
                     } @else {
-                      ✅
+                      ✅ Confirmar
                     }
-                    Confirmar
                   </button>
                 }
-                <button
-                  class="btn-cancelar"
+                <button class="btn-cancelar"
                   [disabled]="loadingConfirmar() === cita.id"
                   (click)="cancelarCita(cita, $event)">
                   🚫 Cancelar
@@ -150,16 +148,12 @@
           }
         </div>
       }
-
     </div>
   }
 
   <!-- Toasts -->
-  @if (successMsg()) {
-    <div class="toast toast-success">{{ successMsg() }}</div>
-  }
-  @if (errorMsg()) {
-    <div class="toast toast-error">⚠️ {{ errorMsg() }}</div>
-  }
+  @if (successMsg()) { <div class="toast toast-success">{{ successMsg() }}</div> }
+  @if (warningMsg()) { <div class="toast toast-warning">⚠️ {{ warningMsg() }}</div> }
+  @if (errorMsg())   { <div class="toast toast-error">⚠️ {{ errorMsg() }}</div> }
 
 </div>

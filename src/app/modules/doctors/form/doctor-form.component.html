@@ -1,0 +1,128 @@
+<!-- src/app/modules/doctors/form/doctor-form.component.html -->
+<div class="page">
+
+  <div class="page-header">
+    <a routerLink="/doctores" class="back-link">← Volver a doctores</a>
+    <h1>{{ isEditing() ? 'Editar doctor' : 'Nuevo doctor' }}</h1>
+  </div>
+
+  <div class="form-card">
+    @if (loadingPage()) {
+      <div class="form-loading">Cargando...</div>
+    } @else {
+      <form #form="ngForm" (ngSubmit)="onSubmit(form)">
+
+        <!-- Foto -->
+        <div class="foto-section">
+          <div class="foto-preview">
+            @if (fotoPreview()) {
+              <img [src]="fotoPreview()!" alt="Foto del doctor" />
+            } @else {
+              <span class="foto-placeholder">👨‍⚕️</span>
+            }
+          </div>
+          <div class="foto-actions">
+            <label for="foto" class="btn-foto">
+              📷 {{ fotoPreview() ? 'Cambiar foto' : 'Subir foto' }}
+            </label>
+            <input id="foto" type="file" accept="image/*"
+              (change)="onFotoChange($event)" hidden />
+            <p class="foto-hint">JPG, PNG o WEBP. Máx 2MB.</p>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nombre">Nombre completo *</label>
+            <input id="nombre" type="text" [(ngModel)]="doctor.nombre"
+              name="nombre" required minlength="3"
+              placeholder="Dr. Juan García" #nombreCtrl="ngModel"
+              [class.input-error]="nombreCtrl.invalid && nombreCtrl.touched" />
+            @if (nombreCtrl.invalid && nombreCtrl.touched) {
+              <span class="error-msg">Nombre requerido (mín. 3 caracteres).</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="correo">Correo electrónico *</label>
+            <input id="correo" type="email" [(ngModel)]="doctor.correo"
+              name="correo" required [disabled]="isEditing()"
+              placeholder="doctor@clinica.com" #correoCtrl="ngModel"
+              [class.input-error]="correoCtrl.invalid && correoCtrl.touched" />
+            @if (correoCtrl.invalid && correoCtrl.touched) {
+              <span class="error-msg">Correo válido requerido.</span>
+            }
+            @if (isEditing()) {
+              <span class="field-hint">El correo no se puede cambiar.</span>
+            }
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="especialidad">Especialidad *</label>
+            <select id="especialidad" [(ngModel)]="doctor.especialidad"
+              name="especialidad" required #espCtrl="ngModel"
+              [class.input-error]="espCtrl.invalid && espCtrl.touched">
+              <option value="">Seleccionar especialidad</option>
+              @for (esp of ESPECIALIDADES; track esp) {
+                <option [value]="esp">{{ esp }}</option>
+              }
+            </select>
+            @if (espCtrl.invalid && espCtrl.touched) {
+              <span class="error-msg">Selecciona una especialidad.</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="telefono">Teléfono</label>
+            <input id="telefono" type="tel" [(ngModel)]="doctor.telefono"
+              name="telefono" placeholder="4611234567" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rol">Rol *</label>
+            <select id="rol" [(ngModel)]="doctor.rol" name="rol" required>
+              <option value="doctor">🩺 Doctor</option>
+              <option value="admin">⭐ Administrador</option>
+            </select>
+          </div>
+
+          @if (!isEditing()) {
+            <div class="form-group">
+              <label for="password">Contraseña inicial *</label>
+              <input id="password" type="password" [(ngModel)]="password"
+                name="password" required minlength="8"
+                placeholder="Mínimo 8 caracteres" #passCtrl="ngModel"
+                [class.input-error]="passCtrl.invalid && passCtrl.touched" />
+              @if (passCtrl.invalid && passCtrl.touched) {
+                <span class="error-msg">Mínimo 8 caracteres.</span>
+              }
+              <span class="field-hint">El doctor recibirá un correo para confirmar su cuenta.</span>
+            </div>
+          }
+        </div>
+
+        @if (errorMsg()) {
+          <div class="alert alert-error">⚠️ {{ errorMsg() }}</div>
+        }
+
+        <div class="form-actions">
+          <a routerLink="/doctores" class="btn-cancel">Cancelar</a>
+          <button type="submit" class="btn-submit"
+            [disabled]="loading() || form.invalid">
+            @if (loading()) {
+              <span class="spinner"></span> Guardando...
+            } @else {
+              {{ isEditing() ? 'Guardar cambios' : 'Registrar doctor' }}
+            }
+          </button>
+        </div>
+
+      </form>
+    }
+  </div>
+
+</div>

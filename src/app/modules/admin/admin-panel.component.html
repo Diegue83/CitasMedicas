@@ -1,0 +1,385 @@
+<!-- src/app/modules/admin/admin-panel.component.html -->
+<div class="page">
+
+  @if (loading()) {
+    <div class="loading-full">
+      <span class="spinner-lg"></span>
+      <p>Cargando panel de administración...</p>
+    </div>
+  } @else {
+
+    <!-- ════════════════════════════════════════════════════════
+         VISTA GLOBAL
+    ════════════════════════════════════════════════════════ -->
+    @if (vista() === 'global') {
+
+      <div class="page-header">
+        <div>
+          <h1>Panel de Administración</h1>
+          <p class="subtitle">Vista global de todos los doctores</p>
+        </div>
+      </div>
+
+      <!-- Stats globales -->
+      @if (statsGlobales()) {
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-icon">👨‍⚕️</span>
+            <div>
+              <span class="stat-val">{{ statsGlobales().totalDoctores }}</span>
+              <span class="stat-lbl">Doctores activos</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">📅</span>
+            <div>
+              <span class="stat-val">{{ statsGlobales().totalCitasHoy }}</span>
+              <span class="stat-lbl">Citas hoy</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">🗓️</span>
+            <div>
+              <span class="stat-val">{{ statsGlobales().totalCitasMes }}</span>
+              <span class="stat-lbl">Citas este mes</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">✅</span>
+            <div>
+              <span class="stat-val">{{ statsGlobales().confirmadas }}</span>
+              <span class="stat-lbl">Confirmadas</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">⏳</span>
+            <div>
+              <span class="stat-val">{{ statsGlobales().programadas }}</span>
+              <span class="stat-lbl">Pendientes</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">👤</span>
+            <div>
+              <span class="stat-val">{{ statsGlobales().totalPacientes }}</span>
+              <span class="stat-lbl">Total pacientes</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Lista de doctores para seleccionar -->
+      <div class="section">
+        <h2 class="section-title">Doctores — clic para ver su agenda</h2>
+        <div class="doctors-row">
+          @for (d of doctores(); track d.id) {
+            <button class="doctor-chip" (click)="seleccionarDoctor(d)"
+              [style.border-color]="getDoctorColor(d.id!)">
+              <div class="chip-avatar"
+                [style.background]="getDoctorColor(d.id!)">
+                @if (d.foto_url) {
+                  <img [src]="d.foto_url" [alt]="d.nombre" />
+                } @else {
+                  {{ d.nombre.charAt(0).toUpperCase() }}
+                }
+              </div>
+              <div class="chip-info">
+                <span class="chip-nombre">{{ d.nombre }}</span>
+                <span class="chip-esp">{{ d.especialidad }}</span>
+              </div>
+              <span class="chip-arrow">›</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Leyenda de colores -->
+      <div class="leyenda-row">
+        @for (d of doctores(); track d.id) {
+          <span class="leyenda-item">
+            <span class="leyenda-dot" [style.background]="getDoctorColor(d.id!)"></span>
+            {{ d.nombre.split(' ')[0] }} {{ d.nombre.split(' ')[1] || '' }}
+          </span>
+        }
+      </div>
+
+      <!-- Calendario global -->
+      <div class="section">
+        <div class="cal-nav">
+          <button class="nav-btn" (click)="prevMonthGlobal()" [disabled]="loadingCalGlobal()">‹</button>
+          <h2 class="mes-label">{{ mesGlobalLabel }}</h2>
+          <button class="nav-btn" (click)="nextMonthGlobal()" [disabled]="loadingCalGlobal()">›</button>
+        </div>
+
+        <div class="calendar-wrapper">
+          <div class="calendar-grid">
+            @for (dia of DIAS; track dia) {
+              <div class="day-header">{{ dia }}</div>
+            }
+            @for (day of calendarDays(); track day.dateStr) {
+              <div class="day-cell"
+                [class.other-month]="!day.isCurrentMonth"
+                [class.today]="day.isToday"
+                [class.selected]="selectedDay()?.dateStr === day.dateStr"
+                (click)="selectDayGlobal(day)">
+                <span class="day-number">{{ day.date.getDate() }}</span>
+                @if (day.citas.length > 0) {
+                  <div class="citas-dots-multi">
+                    @for (cita of day.citas.slice(0, 4); track cita.id) {
+                      <span class="dot-multi"
+                        [style.background]="getDoctorColor(cita.doctor_id!)">
+                      </span>
+                    }
+                    @if (day.citas.length > 4) {
+                      <span class="more-count">+{{ day.citas.length - 4 }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Panel del día seleccionado (global) -->
+        @if (selectedDay()) {
+          <div class="day-panel">
+            <h3 class="day-panel-title">
+              {{ selectedDay()!.date.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long'}) }}
+            </h3>
+            @if (citasDia().length === 0) {
+              <p class="empty-day">Sin citas este día.</p>
+            } @else {
+              <div class="citas-list-global">
+                @for (cita of citasDia(); track cita.id) {
+                  <div class="cita-global-item"
+                    [style.border-left-color]="getDoctorColor(cita.doctor_id!)">
+                    <div class="cita-global-hora">{{ formatHora(cita.hora_inicio) }}</div>
+                    <div class="cita-global-info">
+                      <p class="cita-paciente">{{ cita.paciente!.nombre }}</p>
+                      <p class="cita-doctor"
+                        [style.color]="getDoctorColor(cita.doctor_id!)">
+                        🩺 {{ getDoctorNombre(cita.doctor_id!) }}
+                      </p>
+                    </div>
+                    <span class="badge {{ estadoBadgeClass(cita.estado!) }}">
+                      {{ cita.estado }}
+                    </span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ════════════════════════════════════════════════════════
+         VISTA POR DOCTOR
+    ════════════════════════════════════════════════════════ -->
+    @if (vista() === 'doctor' && doctorSeleccionado()) {
+
+      <!-- Header con botón de volver -->
+      <div class="page-header">
+        <div class="header-back">
+          <button class="btn-back" (click)="volverGlobal()">← Volver</button>
+          <div class="doctor-header-info">
+            <div class="doctor-header-avatar"
+              [style.background]="getDoctorColor(doctorSeleccionado()!.id!)">
+              @if (doctorSeleccionado()!.foto_url) {
+                <img [src]="doctorSeleccionado()!.foto_url!" [alt]="doctorSeleccionado()!.nombre" />
+              } @else {
+                {{ doctorSeleccionado()!.nombre.charAt(0).toUpperCase() }}
+              }
+            </div>
+            <div>
+              <h1>{{ doctorSeleccionado()!.nombre }}</h1>
+              <p class="subtitle">{{ doctorSeleccionado()!.especialidad }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs de sección -->
+      <div class="tabs">
+        <button class="tab-btn" [class.active]="seccionDoctor() === 'resumen'"
+          (click)="seccionDoctor.set('resumen')">📊 Resumen</button>
+        <button class="tab-btn" [class.active]="seccionDoctor() === 'calendario'"
+          (click)="seccionDoctor.set('calendario')">📅 Calendario</button>
+        <button class="tab-btn" [class.active]="seccionDoctor() === 'citas'"
+          (click)="seccionDoctor.set('citas')">🗓️ Citas</button>
+        <button class="tab-btn" [class.active]="seccionDoctor() === 'pacientes'"
+          (click)="seccionDoctor.set('pacientes')">👤 Pacientes</button>
+      </div>
+
+      @if (loadingDetalle()) {
+        <div class="loading-section">
+          <span class="spinner-lg"></span>
+        </div>
+      } @else {
+
+        <!-- ── Resumen ── -->
+        @if (seccionDoctor() === 'resumen' && statsDoctor()) {
+          <div class="stats-grid">
+            <div class="stat-card"><span class="stat-icon">📅</span>
+              <div><span class="stat-val">{{ statsDoctor().totalHoy }}</span><span class="stat-lbl">Citas hoy</span></div>
+            </div>
+            <div class="stat-card"><span class="stat-icon">🗓️</span>
+              <div><span class="stat-val">{{ statsDoctor().totalMes }}</span><span class="stat-lbl">Citas este mes</span></div>
+            </div>
+            <div class="stat-card"><span class="stat-icon">✅</span>
+              <div><span class="stat-val">{{ statsDoctor().confirmadas }}</span><span class="stat-lbl">Confirmadas</span></div>
+            </div>
+            <div class="stat-card"><span class="stat-icon">⏳</span>
+              <div><span class="stat-val">{{ statsDoctor().programadas }}</span><span class="stat-lbl">Pendientes</span></div>
+            </div>
+            <div class="stat-card"><span class="stat-icon">👤</span>
+              <div><span class="stat-val">{{ statsDoctor().totalPacientes }}</span><span class="stat-lbl">Pacientes</span></div>
+            </div>
+          </div>
+        }
+
+        <!-- ── Calendario del doctor ── -->
+        @if (seccionDoctor() === 'calendario') {
+          <div class="cal-nav">
+            <button class="nav-btn" (click)="prevMonthDoctor()">‹</button>
+            <h2 class="mes-label">{{ mesDoctorLabel }}</h2>
+            <button class="nav-btn" (click)="nextMonthDoctor()">›</button>
+          </div>
+
+          <div class="calendar-wrapper">
+            <div class="calendar-grid">
+              @for (dia of DIAS; track dia) {
+                <div class="day-header">{{ dia }}</div>
+              }
+              @for (day of calDoctorDays(); track day.dateStr) {
+                <div class="day-cell"
+                  [class.other-month]="!day.isCurrentMonth"
+                  [class.today]="day.isToday"
+                  [class.selected]="selectedDayDoctor()?.dateStr === day.dateStr"
+                  (click)="selectDayDoctor(day)">
+                  <span class="day-number">{{ day.date.getDate() }}</span>
+                  @if (day.citas.length > 0) {
+                    <div class="citas-dots-multi">
+                      @for (cita of day.citas.slice(0,3); track cita.id) {
+                        <span class="dot-multi"
+                          [style.background]="cita.estado === 'confirmada' ? '#22c55e' : '#f59e0b'">
+                        </span>
+                      }
+                      @if (day.citas.length > 3) {
+                        <span class="more-count">+{{ day.citas.length - 3 }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (selectedDayDoctor()) {
+            <div class="day-panel">
+              <h3 class="day-panel-title">
+                {{ selectedDayDoctor()!.date.toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long'}) }}
+              </h3>
+              @if (citasDoctor().length === 0) {
+                <p class="empty-day">Sin citas este día.</p>
+              } @else {
+                <div class="citas-list-global">
+                  @for (cita of citasDoctor(); track cita.id) {
+                    <div class="cita-global-item"
+                      [style.border-left-color]="cita.estado === 'confirmada' ? '#22c55e' : '#f59e0b'">
+                      <div class="cita-global-hora">{{ formatHora(cita.hora_inicio) }}</div>
+                      <div class="cita-global-info">
+                        <p class="cita-paciente">{{ cita.paciente!.nombre }}</p>
+                        <p class="cita-meta">{{ cita.duracion }} min</p>
+                      </div>
+                      <span class="badge {{ estadoBadgeClass(cita.estado!) }}">{{ cita.estado }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- ── Lista de citas ── -->
+        @if (seccionDoctor() === 'citas') {
+          <div class="list-toolbar">
+            <input type="date" [(ngModel)]="fechaListaCitas"
+              (ngModelChange)="onFechaListaCitas($event)"
+              class="date-input" />
+            <span class="badge-count">{{ citasDoctor().length }} citas</span>
+          </div>
+
+          @if (citasDoctor().length === 0) {
+            <div class="empty-state">
+              <span>📅</span>
+              <p>Sin citas para esta fecha.</p>
+            </div>
+          } @else {
+            <div class="citas-table-wrapper">
+              <table class="citas-table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Paciente</th>
+                    <th>Teléfono</th>
+                    <th>Duración</th>
+                    <th>Estado</th>
+                    <th>Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (cita of citasDoctor(); track cita.id) {
+                    <tr>
+                      <td class="td-hora">{{ formatHora(cita.hora_inicio) }}</td>
+                      <td>
+                        <div class="paciente-cell">
+                          <div class="mini-avatar">{{ cita.paciente!.nombre.charAt(0) }}</div>
+                          {{ cita.paciente!.nombre }}
+                        </div>
+                      </td>
+                      <td>{{ cita.paciente!.telefono }}</td>
+                      <td>{{ cita.duracion }} min</td>
+                      <td><span class="badge {{ estadoBadgeClass(cita.estado!) }}">{{ cita.estado }}</span></td>
+                      <td class="td-notas">{{ cita.notas || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        <!-- ── Pacientes ── -->
+        @if (seccionDoctor() === 'pacientes') {
+          <div class="list-toolbar">
+            <span class="badge-count">{{ pacientesDoctor().length }} pacientes</span>
+          </div>
+
+          @if (pacientesDoctor().length === 0) {
+            <div class="empty-state">
+              <span>👤</span>
+              <p>Este doctor no tiene pacientes registrados.</p>
+            </div>
+          } @else {
+            <div class="pacientes-grid">
+              @for (p of pacientesDoctor(); track p.id) {
+                <div class="paciente-card">
+                  <div class="pac-avatar">{{ p.nombre.charAt(0).toUpperCase() }}</div>
+                  <div class="pac-info">
+                    <p class="pac-nombre">{{ p.nombre }}</p>
+                    <p class="pac-tel">📞 {{ p.telefono }}</p>
+                    @if (p.correo) { <p class="pac-email">✉️ {{ p.correo }}</p> }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+
+      }
+    }
+
+  }
+
+</div>

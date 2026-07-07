@@ -1,0 +1,402 @@
+<!-- src/app/modules/profile/profile.component.html -->
+<div class="page">
+
+  <!-- Header con avatar grande -->
+  <div class="profile-hero">
+    <div class="hero-avatar">
+      @if (fotoPreview()) {
+        <img [src]="fotoPreview()!" alt="foto" />
+      } @else {
+        <span>{{ doctorInicial }}</span>
+      }
+    </div>
+    <div class="hero-info">
+      <h1>{{ auth.currentDoctor()?.nombre }}</h1>
+      <p class="hero-esp">{{ auth.currentDoctor()?.especialidad }}</p>
+      <div class="hero-badges">
+        <span class="badge-rol" [class.badge-admin]="isAdmin()">
+          {{ isAdmin() ? '⭐ Administrador' : '🩺 Doctor' }}
+        </span>
+        <span class="badge-email">✉️ {{ doctorEmail }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pestañas -->
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="activeTab() === 'info'"
+      (click)="setTab('info')">
+      👤 Info personal
+    </button>
+    @if (isAdmin()) {
+      <button class="tab-btn" [class.active]="activeTab() === 'doctores'"
+        (click)="setTab('doctores')">
+        👨‍⚕️ Doctores
+        @if (doctores().length > 0) {
+          <span class="tab-count">{{ doctores().length }}</span>
+        }
+      </button>
+    }
+    <button class="tab-btn" [class.active]="activeTab() === 'seguridad'"
+      (click)="setTab('seguridad')">
+      🔒 Seguridad
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       TAB 1: Info personal
+  ═══════════════════════════════════════════════════ -->
+  @if (activeTab() === 'info') {
+    <div class="tab-content">
+
+      <!-- Estadísticas -->
+      <div class="stats-section">
+        <h2 class="section-title">Mis estadísticas</h2>
+        @if (loadingStats()) {
+          <div class="stats-grid">
+            @for (i of [1,2,3,4]; track i) { <div class="stat-card skeleton"></div> }
+          </div>
+        } @else {
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-icon">🗓️</span>
+              <div>
+                <span class="stat-val">{{ stats().citasMes }}</span>
+                <span class="stat-lbl">Citas este mes</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">✅</span>
+              <div>
+                <span class="stat-val">{{ stats().confirmadas }}</span>
+                <span class="stat-lbl">Confirmadas</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">👤</span>
+              <div>
+                <span class="stat-val">{{ stats().totalPacientes }}</span>
+                <span class="stat-lbl">Pacientes</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">📊</span>
+              <div>
+                <span class="stat-val">{{ stats().totalCitas }}</span>
+                <span class="stat-lbl">Total citas</span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Formulario de perfil -->
+      <div class="form-section">
+        <h2 class="section-title">Editar información</h2>
+        <form #infoForm="ngForm" (ngSubmit)="guardarInfo(infoForm)" class="form-card">
+
+          <!-- Foto -->
+          <div class="foto-row">
+            <div class="foto-circle">
+              @if (fotoPreview()) {
+                <img [src]="fotoPreview()!" alt="foto" />
+              } @else {
+                <span>{{ doctorInicial }}</span>
+              }
+            </div>
+            <div>
+              <label for="fotoInput" class="btn-foto">📷 Cambiar foto</label>
+              <input id="fotoInput" type="file" accept="image/*"
+                (change)="onFotoChange($event)" hidden />
+              <p class="hint">JPG, PNG o WEBP · Máx 2MB</p>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre completo *</label>
+              <input type="text" [(ngModel)]="perfil.nombre" name="nombre"
+                required minlength="3" placeholder="Dr. Nombre Apellido"
+                #nombreCtrl="ngModel"
+                [class.input-error]="nombreCtrl.invalid && nombreCtrl.touched" />
+              @if (nombreCtrl.invalid && nombreCtrl.touched) {
+                <span class="error-msg">Nombre requerido (mín. 3 caracteres).</span>
+              }
+            </div>
+            <div class="form-group">
+              <label>Especialidad *</label>
+              <select [(ngModel)]="perfil.especialidad" name="especialidad" required
+                #espCtrl="ngModel"
+                [class.input-error]="espCtrl.invalid && espCtrl.touched">
+                <option value="">Seleccionar</option>
+                @for (e of ESPECIALIDADES; track e) {
+                  <option [value]="e">{{ e }}</option>
+                }
+              </select>
+              @if (espCtrl.invalid && espCtrl.touched) {
+                <span class="error-msg">Selecciona una especialidad.</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="tel" [(ngModel)]="perfil.telefono" name="telefono"
+              placeholder="4611234567" />
+          </div>
+
+          @if (errorInfo())   { <div class="alert alert-error">⚠️ {{ errorInfo() }}</div> }
+          @if (successInfo()) { <div class="alert alert-success">✅ {{ successInfo() }}</div> }
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" [disabled]="loadingInfo() || infoForm.invalid">
+              @if (loadingInfo()) { <span class="spinner"></span> Guardando... }
+              @else { 💾 Guardar cambios }
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════
+       TAB 2: Gestión de doctores (solo admin)
+  ═══════════════════════════════════════════════════ -->
+  @if (activeTab() === 'doctores' && isAdmin()) {
+    <div class="tab-content">
+
+      <div class="section-header">
+        <h2 class="section-title">Doctores registrados</h2>
+        <button class="btn-primary" (click)="abrirFormNuevo()">
+          + Nuevo doctor
+        </button>
+      </div>
+
+      @if (successDoctores() && !showDoctorForm()) {
+        <div class="alert alert-success">✅ {{ successDoctores() }}</div>
+      }
+
+      <!-- Formulario inline para crear/editar doctor -->
+      @if (showDoctorForm()) {
+        <div class="doctor-form-card">
+          <div class="doctor-form-header">
+            <h3>{{ editingDoctor() ? 'Editar doctor' : 'Nuevo doctor' }}</h3>
+            <button class="btn-close" (click)="cerrarForm()">✕</button>
+          </div>
+
+          <form #doctorFrm="ngForm" (ngSubmit)="guardarDoctor(doctorFrm)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nombre completo *</label>
+                <input type="text" [(ngModel)]="doctorForm.nombre"
+                  name="dNombre" required minlength="3"
+                  placeholder="Dr. Juan García" />
+              </div>
+              <div class="form-group">
+                <label>Correo electrónico *</label>
+                <input type="email" [(ngModel)]="doctorForm.correo"
+                  name="dCorreo" required [disabled]="!!editingDoctor()"
+                  placeholder="doctor@clinica.com" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Especialidad *</label>
+                <select [(ngModel)]="doctorForm.especialidad"
+                  name="dEsp" required>
+                  <option value="">Seleccionar</option>
+                  @for (e of ESPECIALIDADES; track e) {
+                    <option [value]="e">{{ e }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Teléfono</label>
+                <input type="tel" [(ngModel)]="doctorForm.telefono"
+                  name="dTel" placeholder="4611234567" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Rol *</label>
+                <select [(ngModel)]="doctorForm.rol" name="dRol" required>
+                  <option value="doctor">🩺 Doctor</option>
+                  <option value="admin">⭐ Administrador</option>
+                </select>
+              </div>
+              @if (!editingDoctor()) {
+                <div class="form-group">
+                  <label>Contraseña inicial *</label>
+                  <input type="password" [(ngModel)]="doctorForm.password"
+                    name="dPass" required minlength="8"
+                    placeholder="Mínimo 8 caracteres" />
+                  <span class="hint">Recibirá un correo de confirmación.</span>
+                </div>
+              }
+            </div>
+
+            @if (errorDoctores()) {
+              <div class="alert alert-error">⚠️ {{ errorDoctores() }}</div>
+            }
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" (click)="cerrarForm()">
+                Cancelar
+              </button>
+              <button type="submit" class="btn-primary"
+                [disabled]="loadingDoctorSave() || doctorFrm.invalid">
+                @if (loadingDoctorSave()) { <span class="spinner"></span> Guardando... }
+                @else { {{ editingDoctor() ? '💾 Guardar cambios' : '➕ Registrar doctor' }} }
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+
+      <!-- Lista de doctores -->
+      @if (loadingDoctores()) {
+        <div class="doctors-grid">
+          @for (i of [1,2,3]; track i) { <div class="skeleton-card"></div> }
+        </div>
+      } @else if (doctores().length === 0) {
+        <div class="empty-state">
+          <span>👨‍⚕️</span>
+          <p>No hay doctores registrados aún.</p>
+        </div>
+      } @else {
+        <div class="doctors-grid">
+          @for (d of doctores(); track d.id) {
+            <div class="doctor-card" [class.inactivo]="!d.activo">
+              <div class="doctor-avatar">
+                @if (d.foto_url) {
+                  <img [src]="d.foto_url" [alt]="d.nombre" />
+                } @else {
+                  <span>{{ d.nombre.charAt(0).toUpperCase() }}</span>
+                }
+              </div>
+              <div class="doctor-info">
+                <div class="doctor-name-row">
+                  <strong>{{ d.nombre }}</strong>
+                  <span class="badge-rol-sm" [class.badge-admin-sm]="d.rol === 'admin'">
+                    {{ rolLabel(d.rol) }}
+                  </span>
+                </div>
+                <p class="doctor-esp">{{ d.especialidad }}</p>
+                <p class="doctor-email">{{ d.correo }}</p>
+                @if (d.telefono) { <p class="doctor-tel">📞 {{ d.telefono }}</p> }
+                @if (!d.activo) { <span class="badge-inactivo">⚠️ Inactivo</span> }
+              </div>
+              <div class="doctor-actions">
+                <button class="btn-icon btn-edit" (click)="abrirFormEditar(d)" title="Editar">✏️</button>
+                <button class="btn-icon"
+                  [class.btn-deactivate]="d.activo"
+                  [class.btn-activate]="!d.activo"
+                  (click)="toggleActivo(d)"
+                  [title]="d.activo ? 'Desactivar' : 'Activar'">
+                  {{ d.activo ? '🔒' : '✅' }}
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════
+       TAB 3: Seguridad
+  ═══════════════════════════════════════════════════ -->
+  @if (activeTab() === 'seguridad') {
+    <div class="tab-content">
+
+      <div class="form-section">
+        <h2 class="section-title">Cambiar contraseña</h2>
+        <form #passForm="ngForm" (ngSubmit)="cambiarPassword(passForm)" class="form-card security-card">
+
+          <div class="form-group">
+            <label>Nueva contraseña *</label>
+            <div class="pass-wrapper">
+              <input [type]="showNueva ? 'text' : 'password'"
+                [(ngModel)]="passwordForm.nueva" name="nueva"
+                required minlength="8" placeholder="Mínimo 8 caracteres"
+                #nuevaCtrl="ngModel"
+                [class.input-error]="nuevaCtrl.invalid && nuevaCtrl.touched" />
+              <button type="button" class="toggle-pass"
+                (click)="showNueva = !showNueva">
+                {{ showNueva ? '🙈' : '👁️' }}
+              </button>
+            </div>
+            @if (nuevaCtrl.invalid && nuevaCtrl.touched) {
+              <span class="error-msg">Mínimo 8 caracteres.</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Confirmar nueva contraseña *</label>
+            <div class="pass-wrapper">
+              <input [type]="showConfirm ? 'text' : 'password'"
+                [(ngModel)]="passwordForm.confirmar" name="confirmar"
+                required minlength="8" placeholder="Repite la contraseña"
+                #confirmCtrl="ngModel"
+                [class.input-error]="confirmCtrl.invalid && confirmCtrl.touched" />
+              <button type="button" class="toggle-pass"
+                (click)="showConfirm = !showConfirm">
+                {{ showConfirm ? '🙈' : '👁️' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Indicador de fortaleza -->
+          @if (passwordForm.nueva.length > 0) {
+            <div class="strength-bar">
+              <div class="strength-fill"
+                [class.weak]="passwordForm.nueva.length < 8"
+                [class.medium]="passwordForm.nueva.length >= 8 && passwordForm.nueva.length < 12"
+                [class.strong]="passwordForm.nueva.length >= 12">
+              </div>
+              <span class="strength-label">
+                @if (passwordForm.nueva.length < 8) { Débil }
+                @else if (passwordForm.nueva.length < 12) { Media }
+                @else { Fuerte }
+              </span>
+            </div>
+          }
+
+          @if (errorPass())   { <div class="alert alert-error">⚠️ {{ errorPass() }}</div> }
+          @if (successPass()) { <div class="alert alert-success">✅ {{ successPass() }}</div> }
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary"
+              [disabled]="loadingPass() || passForm.invalid">
+              @if (loadingPass()) { <span class="spinner"></span> Actualizando... }
+              @else { 🔒 Actualizar contraseña }
+            </button>
+          </div>
+
+        </form>
+
+        <!-- Sección de sesión activa -->
+        <div class="session-card">
+          <h3>Sesión activa</h3>
+          <div class="session-info">
+            <span class="session-dot"></span>
+            <div>
+              <p class="session-email">{{ doctorEmail }}</p>
+              <p class="session-hint">Sesión iniciada en este dispositivo</p>
+            </div>
+          </div>
+          <button class="btn-danger" (click)="auth.logout()">
+            🚪 Cerrar sesión
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>
