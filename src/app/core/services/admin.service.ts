@@ -63,9 +63,12 @@ export class AdminService {
     const inicio = toLocalDateString(new Date(year, month, 1));
     const fin    = toLocalDateString(new Date(year, month + 1, 0));
 
+    // Quitamos el join con doctores — no hay FK explícita.
+    // El componente ya tiene la lista de doctores cargada
+    // y usa getDoctorNombre/getDoctorColor con el doctor_id.
     const { data, error } = await this.supabase.client
       .from('citas')
-      .select('*, paciente:pacientes(*), doctor:doctores(id, nombre, especialidad, foto_url)')
+      .select('*, paciente:pacientes(*)')
       .neq('estado', 'cancelada')
       .gte('fecha', inicio)
       .lte('fecha', fin)
@@ -79,7 +82,7 @@ export class AdminService {
   async getCitasTodosDelDia(fecha: string): Promise<CitaConPaciente[]> {
     const { data, error } = await this.supabase.client
       .from('citas')
-      .select('*, paciente:pacientes(*), doctor:doctores(id, nombre, especialidad, foto_url)')
+      .select('*, paciente:pacientes(*)')
       .eq('fecha', fecha)
       .neq('estado', 'cancelada')
       .order('hora_inicio', { ascending: true });

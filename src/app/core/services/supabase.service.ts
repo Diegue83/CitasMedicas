@@ -44,28 +44,21 @@ export class SupabaseService {
 
   // ─── Auth Google OAuth ──────────────────────────────────────
 
-  /**
-   * Inicia el flujo OAuth con Google pidiendo TAMBIÉN el permiso
-   * de Google Calendar (calendar.events) para poder crear y eliminar
-   * eventos cuando el doctor agende o cancele citas.
-   *
-   * El scope 'email' y 'profile' los agrega Supabase automáticamente.
-   * Solo necesitamos agregar el scope extra de Calendar.
-   *
-   * IMPORTANTE: El doctor verá una pantalla de permisos de Google
-   * donde debe aceptar que la app pueda gestionar sus eventos
-   * de calendario. Esto es normal y requerido.
-   */
   async signInWithGoogle() {
     return this.supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
-        scopes: 'https://www.googleapis.com/auth/calendar.events',
+        // FIX 1: scope correcto — calendar.events no calendar
+        scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
         queryParams: {
-          // Forzar pantalla de selección de cuenta (útil si el doctor
-          // tiene varias cuentas de Google)
-          prompt: 'select_account'
+          // FIX 2: consent en vez de select_account
+          // 'consent' fuerza la pantalla de permisos SIEMPRE
+          // y garantiza que Google devuelva el provider_token.
+          // 'select_account' puede saltarse la pantalla y no devolver token.
+          prompt: 'consent',
+          // offline garantiza que Supabase reciba el refresh_token
+          access_type: 'offline'
         }
       }
     });

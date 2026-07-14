@@ -30,8 +30,20 @@ export class GoogleCalendarService {
       return { conectado: false, motivo: 'No hay sesión activa.' };
     }
 
-    const provider = session.user?.app_metadata?.provider;
-    if (provider !== 'google') {
+    // Supabase guarda el provider en distintos lugares según la versión del SDK.
+    // Revisamos todos para mayor compatibilidad.
+    const user            = session.user;
+    const appProvider     = user?.app_metadata?.provider as string | undefined;
+    const identities      = user?.identities ?? [];
+    const hasGoogleId     = identities.some((i: any) => i.provider === 'google');
+    const isGoogle        = appProvider === 'google' || hasGoogleId;
+
+    // Debug — imprime en consola para ayudar a diagnosticar
+    console.log('[GoogleCalendar] provider:', appProvider);
+    console.log('[GoogleCalendar] identities:', identities.map((i: any) => i.provider));
+    console.log('[GoogleCalendar] provider_token:', session.provider_token ? '✅ presente' : '❌ ausente');
+
+    if (!isGoogle) {
       return {
         conectado: false,
         motivo: 'Iniciaste sesión con correo y contraseña. Para sincronizar con Google Calendar debes iniciar sesión con el botón de Google.'
@@ -40,27 +52,34 @@ export class GoogleCalendarService {
 
     const token = session.provider_token;
     if (!token) {
+      // Entró con Google pero no hay token — esto pasa cuando:
+      // 1. El token expiró (~1 hora después del login)
+      // 2. Supabase no incluyó el scope de Calendar en el redirect
       return {
         conectado: false,
-        motivo: 'El token de Google expiró. Por favor cierra sesión y vuelve a entrar con Google.'
+        motivo: 'Token de Google no disponible. Cierra sesión y vuelve a entrar con el botón de Google para renovarlo.'
       };
     }
 
-    // Verificar que el token funcione realmente
+    // Verificar que el token funcione haciendo una llamada real
     try {
       const res = await fetch(`${CALENDAR_API}/calendars/${CALENDAR_ID}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) {
+        console.warn('[GoogleCalendar] Token inválido, status:', res.status);
         return {
           conectado: false,
           motivo: res.status === 401
-            ? 'El token de Google expiró. Cierra sesión y vuelve a entrar con Google.'
+            ? 'Token de Google expirado. Cierra sesión y vuelve a entrar con Google.'
             : `Error al conectar con Google Calendar (${res.status}).`
         };
       }
     } catch {
-      return { conectado: false, motivo: 'No se pudo conectar con Google Calendar. Verifica tu conexión.' };
+      return {
+        conectado: false,
+        motivo: 'No se pudo verificar la conexión con Google Calendar. Revisa tu conexión a internet.'
+      };
     }
 
     return { conectado: true };
@@ -143,12 +162,34 @@ export class GoogleCalendarService {
   ): GoogleCalendarEvent {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    const startDateTime = `${cita.fecha}T${cita.hora_inicio}:00`;
-    const [h, m]        = cita.hora_inicio.split(':').map(Number);
-    const totalMin      = h * 60 + m + cita.duracion;
-    const endH          = Math.floor(totalMin / 60).toString().padStart(2, '0');
-    const endM          = (totalMin % 60).toString().padStart(2, '0');
-    const endDateTime   = `${cita.fecha}T${endH}:${endM}:00`;
+    // Construir fecha+hora como objeto Date local para obtener
+    // el offset correcto de zona horaria
+    const [year, month, day] = cita.fecha.split('-').map(Number);
+    const [h, m]             = cita.hora_inicio.split(':').map(Number);
+
+    const startDate = new Date(year, month - 1, day, h, m, 0);
+    const endDate   = new Date(startDate.getTime() + cita.duracion * 60 * 1000);
+
+    // toISOString() con ajuste de zona horaria local
+    const toLocalISO = (date: Date): string => {
+      const offset  = -date.getTimezoneOffset();
+      const sign    = offset >= 0 ? '+' : '-';
+      const absOff  = Math.abs(offset);
+      const offH    = Math.floor(absOff / 60).toString().padStart(2, '0');
+      const offM    = (absOff % 60).toString().padStart(2, '0');
+      const y       = date.getFullYear();
+      const mo      = (date.getMonth() + 1).toString().padStart(2, '0');
+      const d       = date.getDate().toString().padStart(2, '0');
+      const hr      = date.getHours().toString().padStart(2, '0');
+      const min     = date.getMinutes().toString().padStart(2, '0');
+      const sec     = date.getSeconds().toString().padStart(2, '0');
+      return `${y}-${mo}-${d}T${hr}:${min}:${sec}${sign}${offH}:${offM}`;
+    };
+
+    const startDateTime = toLocalISO(startDate);
+    const endDateTime   = toLocalISO(endDate);
+
+    console.log('[GoogleCalendar] Evento:', { startDateTime, endDateTime, timeZone });
 
     const descripcion = [
       '📋 Cita médica confirmada',

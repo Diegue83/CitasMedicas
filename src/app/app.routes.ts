@@ -62,5 +62,10 @@ export const routes: Routes = [
       import('./modules/profile/profile.component').then(m => m.ProfileComponent),
     canActivate: [authGuard]
   },
+  {
+  path: 'diagnostico',
+  loadComponent: () =>
+    import('./modules/diagnostico/diagnostico.component').then(m => m.DiagnosticoComponent)
+},
   { path: '**', redirectTo: 'dashboard' }
 ];
