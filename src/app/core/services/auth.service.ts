@@ -40,19 +40,45 @@ export class AuthService {
     });
   }
 
-  /** Carga el perfil del doctor desde la tabla doctores */
+  /**
+   * Carga el perfil del doctor.
+   * Si el usuario NO está en la tabla doctores como activo,
+   * cierra la sesión automáticamente — esto bloquea pacientes
+   * y cualquier otro usuario que no sea doctor registrado.
+   */
   private async loadDoctorProfile(userId: string) {
     try {
-      const { data } = await this.supabase.client
+      // maybeSingle() devuelve null sin error cuando no hay filas
+      // single() devuelve error 406 cuando no hay filas — eso causaba
+      // el cierre de sesión inmediato al entrar con Google
+      const { data, error } = await this.supabase.client
         .from('doctores')
         .select('*')
         .eq('id', userId)
-        .single();
+        .eq('activo', true)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[Auth] Error al cargar perfil:', error.message);
+        this.currentDoctor.set(null);
+        return;
+      }
+
       this.currentDoctor.set(data ?? null);
-    } catch {
+
+      if (!data) {
+        console.warn('[Auth] Usuario no es doctor activo — cerrando sesión.');
+        await this.supabase.signOut();
+        this.currentUser.set(null);
+        this.router.navigate(['/login']);
+      }
+    } catch (err) {
+      console.error('[Auth] Error inesperado:', err);
       this.currentDoctor.set(null);
     }
   }
+
+  // ─── Login con email/password ────────────────────────────────
 
   async login(email: string, password: string): Promise<{ error: string | null }> {
     const { data, error } = await this.supabase.signIn(email, password);
@@ -60,17 +86,17 @@ export class AuthService {
       return { error: 'Credenciales inválidas. Verifica tu correo y contraseña.' };
     }
 
-    // Verificar que el usuario sea un doctor registrado
+    // Verificar que sea doctor activo
     const { data: doctor } = await this.supabase.client
       .from('doctores')
       .select('*')
       .eq('id', data.user?.id)
       .eq('activo', true)
-      .single();
+      .maybeSingle();
 
     if (!doctor) {
       await this.supabase.signOut();
-      return { error: 'No tienes acceso al sistema. Contacta al administrador.' };
+      return { error: 'Acceso denegado. Solo los doctores registrados pueden ingresar al sistema.' };
     }
 
     this.currentUser.set(data.user);
@@ -78,6 +104,13 @@ export class AuthService {
     return { error: null };
   }
 
+  // ─── Login con Google ────────────────────────────────────────
+
+  /**
+   * Inicia el flujo OAuth con Google.
+   * La verificación de que sea doctor se hace en loadDoctorProfile()
+   * cuando Supabase dispara el evento SIGNED_IN tras el redirect.
+   */
   async loginWithGoogle(): Promise<{ error: string | null }> {
     const { error } = await this.supabase.signInWithGoogle();
     if (error) {
@@ -86,12 +119,16 @@ export class AuthService {
     return { error: null };
   }
 
+  // ─── Logout ──────────────────────────────────────────────────
+
   async logout() {
     await this.supabase.signOut();
     this.currentUser.set(null);
     this.currentDoctor.set(null);
     this.router.navigate(['/login']);
   }
+
+  // ─── Helpers ─────────────────────────────────────────────────
 
   isAuthenticated(): boolean {
     return !!this.currentUser();
